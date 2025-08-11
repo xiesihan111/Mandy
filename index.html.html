@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MandyLove </title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap"
+rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            cursor: url('https://i.postimg.cc/rsvhwrDK/20250811053151-307-removebg-preview.png') 16 16, auto;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 30, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            color: white;
+            max-width: 300px;
+            transition: all 0.3s ease;
+        }
+        #controls.collapsed {
+            transform: translateX(-90%);
+        }
+        #toggle-controls {
+            position: absolute;
+            right: -30px;
+            top: 10px;
+            background: rgba(0, 0, 30, 0.7);
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        textarea {
+            width: 100%;
+            height: 60px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #4fc3f7;
+            border-radius: 4px;
+            color: white;
+            padding: 8px;
+        }
+        button {
+            background: #4fc3f7;
+            color: #0d47a1;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 30, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+        }
+        #music-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 30, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+        }
+        #volume-control {
+            width: 100px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button id="toggle-controls">◀</button>
+        <h3>宇宙控制台</h3>
+        
+        <div class="control-group">
+            <label for="textInput">文本内容 (用逗号分隔):</label>
+            <textarea id="textInput">生日快乐🎂,曼曼天天开心平平安安！,i love you,Eres una chica guapa,Се Сихан плохо к тебе относится. Я могу помочь тебе победить ее,慢慢学业有成一切顺利</textarea>
+            <button onclick="updateText()">更新文本</button>
+        </div>
+        
+        <div class="control-group">
+            <label for="particleCount">文字粒子数量: <span id="particleCountValue">30</span></label>
+            <input type="range" id="particleCount" min="5" max="100" value="30">
+            
+            <label for="spaceObjectCount">太空物体数量: <span id="spaceObjectCountValue">10</span></label>
+            <input type="range" id="spaceObjectCount" min="0" max="30" value="10">
+            
+            <button onclick="resetParticles()">重置所有</button>
+        </div>
+    </div>
+
+    <div id="music-controls">
+        <h4>音乐控制</h4>
+        <button id="playBtn">播放音乐</button>
+        <button id="pauseBtn">暂停音乐</button>
+        <div style="margin-top: 5px;">
+            <label for="volume-control">音量:</label>
+            <input type="range" id="volume-control" min="0" max="1" step="0.1" value="0.7">
+        </div>
+    </div>
+
+    <div id="instructions">
+        点击屏幕任意位置添加文字粒子
+    </div>
+
+    <!-- 添加音频元素 -->
+    <audio id="bgMusic" loop>
+        <source src="http://music.163.com/song/media/outer/url?id=33544561.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+
+    <script>
+        let numParticles = 0;
+        let numSpaceObjects = 13;
+        let numStars = 500;
+        let noiseScale = 100, noiseStrength = 1;
+        let particles = [];
+        let spaceObjects = [];
+        let stars = [];
+        let sentences = [
+            "生日快乐🎂",
+            "曼曼天天开心平平安安！",
+            "i love you",
+            "Eres una chica guapa",
+            "Се Сихан плохо к тебе относится. Я могу помочь тебе победить ее",
+            "慢慢学业有成一切顺利",
+            "曼曼是个无敌厉害美女子！事事顺遂！",
+            "曼曼你超棒超勇敢！新一岁祝天天开心万事胜意！",
+            "曼曼祝你一直开开心心！新的一岁继续勇敢的做自己！",
+            "生日快乐天天幸福！",
+            "曼曼生日快乐呀🎉天天开心！！",
+            "最棒的曼曼生日快乐！天天开心诸事顺意🎂",
+            "亲爱的曼曼生日快乐呀！祝你健康幸福无烦恼！",
+            "曼曼生日快乐🎂 Happy 19th🥳 祝你前程一片似锦 未来可期 天天开心 你真的是个很棒很棒的小女孩！！！",
+            "曼曼生日快乐🎂天天开心 心想事成 科科满绩 健康快乐",
+            "曼曼生日快乐！！天天开心！心想事成！身体健康！",
+            "慢慢生日快乐万事顺意！天天开心！吃好喝好睡好❣️",
+            "19岁啦 愿你永远做那个自信勇敢有冲劲的女孩 诸事顺意 万事顺遂！！如果有什么事情让你烦心为难 我永远站在你这边哟",
+            "yzm生日快乐！o((*^▽^*))o要天天开心 永远幸福呀 忙碌的日子别忘了我们这群老友哇 祝杨总蒸蒸日上 步步高升 🐶富贵 雾相忘（doge）",
+            "生日快乐 祝你生活顺遂 一切可以按自己的想法走",
+            "zhi曼生日快乐哇！认识的第七年啦 祝你开心幸福 也祝我们可以一起继续玩下去！",
+            "这一年看着你走过了很多的地方 每一次出发都是勇敢的冒险 祝你以后能一直做为梦想努力的追光者 一路耕耘 一路花开🌸",
+            "曼曼生日快乐！！开心快乐每一天哦！",         
+        ];
+
+        // 预加载太空物体图像
+        let spaceObjectImages = [];
+        function preload() {
+            // 使用免费太空图像资源
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/NMbqFptL/20250811053139-305-removebg-preview.png')); // 宇宙飞船
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/d0vxCr4C/20250811053144-306-removebg-preview.png')); // 小行星1
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/rsvhwrDK/20250811053151-307-removebg-preview.png')); // 小行星2
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/CxpPyby2/20250811053156-308-removebg-preview.png')); // 卫星1
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/SsRVLr8n/20250811053202-309-removebg-preview.png')); // 卫星2
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/T3xrPcCg/20250811225004-350-removebg-preview.png')); // 卫星3
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/PqrYW5Gq/20250811225004-349-removebg-preview.png')); // 卫星4
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/HLZ5B1H9/20250811225004-348-removebg-preview.png')); // 卫星5
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/Y9vFPDCK/20250811225004-347-removebg-preview.png')); // 卫星6
+            spaceObjectImages.push(loadImage('https://i.postimg.cc/3xPQpd0X/20250811225004-346-removebg-preview.png')); // 卫星7
+            
+        }
+
+        // 音乐控制相关变量
+        let bgMusic = document.getElementById('bgMusic');
+        let playBtn = document.getElementById('playBtn');
+        let pauseBtn = document.getElementById('pauseBtn');
+        let volumeControl = document.getElementById('volume-control');
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            noStroke();
+            textAlign(CENTER, CENTER);
+            
+            initStars();
+            initParticles();
+            initSpaceObjects();
+
+            bgMusic.play();
+            bgMusic.volume = 0.7;
+            
+            // 控制面板折叠按钮
+            document.getElementById('toggle-controls').addEventListener('click', function() {
+                document.getElementById('controls').classList.toggle('collapsed');
+                this.textContent = document.getElementById('controls').classList.contains('collapsed') ? '▶' : '◀';
+            });
+
+            // 粒子数量控制
+            document.getElementById('particleCount').addEventListener('input', function() {
+                numParticles = this.value;
+                document.getElementById('particleCountValue').textContent = this.value;
+                initParticles();
+            });
+
+            // 太空物体数量控制
+            document.getElementById('spaceObjectCount').addEventListener('input', function() {
+                numSpaceObjects = this.value;
+                document.getElementById('spaceObjectCountValue').textContent = this.value;
+                initSpaceObjects();
+            });
+
+            // 音乐控制事件
+            playBtn.addEventListener('click', function() {
+                bgMusic.play();
+            });
+
+            pauseBtn.addEventListener('click', function() {
+                bgMusic.pause();
+            });
+
+            volumeControl.addEventListener('input', function() {
+                bgMusic.volume = this.value;
+            });
+
+            // 设置初始音量
+            bgMusic.volume = 0.7;
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        function draw() {
+            background(0, 0, 30);
+            
+            // 绘制星空
+            for (let star of stars) {
+                star.display();
+            }
+            
+            // 绘制太空物体
+            for (let obj of spaceObjects) {
+                obj.run();
+            }
+            
+            // 绘制文本粒子
+            for (let particle of particles) {
+                particle.run();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < numParticles; i++) {
+                addParticle(random(width), random(height));
+            }
+        }
+
+        function initSpaceObjects() {
+            spaceObjects = [];
+            for (let i = 0; i < numSpaceObjects; i++) {
+                addSpaceObject(random(width), random(height));
+            }
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < numStars; i++) {
+                stars.push(new Star());
+            }
+        }
+
+        function updateText() {
+            let input = document.getElementById('textInput').value;
+            sentences = input.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        }
+
+        function resetParticles() {
+            particles = [];
+            spaceObjects = [];
+            for (let i = 0; i < numParticles; i++) {
+                addParticle(random(width), random(height));
+            }
+            for (let i = 0; i < numSpaceObjects; i++) {
+                addSpaceObject(random(width), random(height));
+            }
+        }
+
+        function addParticle(x, y) {
+            let loc = createVector(x, y);
+            let angle = 0;
+            let dir = createVector(cos(angle), sin(angle));
+            let speed = random(0.2, 1);
+            let textSize = random(9, 15);
+            let sentence = random(sentences);
+            particles.push(new TextSentence(loc, dir, speed, sentence, textSize));
+        }
+
+        function addSpaceObject(x, y) {
+            let loc = createVector(x, y);
+            let angle = random(TWO_PI);
+            let dir = createVector(cos(angle), sin(angle));
+            let speed = random(0.1, 0.5);
+            let size = random(80, 130);
+            let imgIndex = floor(random(spaceObjectImages.length));
+            spaceObjects.push(new SpaceObject(loc, dir, speed, size, imgIndex));
+        }
+
+        function mouseClicked() {
+            if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                addParticle(mouseX, mouseY);
+            }
+        }
+
+        // 星空类
+        class Star {
+            constructor() {
+                this.x = random(width);
+                this.y = random(height);
+                this.size = random(0.5, 3);
+                this.brightness = random(100, 255);
+                this.twinkleSpeed = random(0.01, 0.05);
+                this.originalBrightness = this.brightness;
+            }
+            
+            display() {
+                this.brightness = this.originalBrightness + sin(frameCount * this.twinkleSpeed) * 50;
+                
+                fill(this.brightness);
+                noStroke();
+                ellipse(this.x, this.y, this.size);
+                
+                if (this.size > 2 && random() < 0.01) {
+                    fill(255, 255, 255, 150);
+                    ellipse(this.x, this.y, this.size * 3);
+                }
+            }
+        }
+
+        // 太空物体类
+        class SpaceObject {
+            constructor(_loc, _dir, _speed, _size, _imgIndex) {
+                this.loc = _loc;
+                this.dir = _dir;
+                this.speed = _speed;
+                this.size = _size;
+                this.imgIndex = _imgIndex;
+                this.rotation = random(TWO_PI);
+                this.rotationSpeed = random(-0.01, 0.03);
+            }
+            
+            run() {
+                this.move();
+                this.checkEdges();
+                this.display();
+            }
+            
+            move() {
+                let angle = noise(this.loc.x/noiseScale, this.loc.y/noiseScale, frameCount/200)*TWO_PI*noiseStrength;
+                this.dir.x = sin(angle);
+                this.dir.y = cos(angle);
+                let vel = this.dir.copy();
+                vel.mult(this.speed);
+                this.loc.add(vel);
+                this.rotation += this.rotationSpeed;
+            }
+            
+            checkEdges() {
+                let margin = 100;
+                if (this.loc.x < -margin || this.loc.x > width + margin || 
+                    this.loc.y < -margin || this.loc.y > height + margin) {
+                    this.loc.x = random(width);
+                    this.loc.y = random(height);
+                }
+            }
+            
+            display() {
+                push();
+                translate(this.loc.x, this.loc.y);
+                rotate(this.rotation);
+                imageMode(CENTER);
+                let img = spaceObjectImages[this.imgIndex];
+                // 调整图像大小并保持宽高比
+                let ratio = img.width / img.height;
+                let w = this.size;
+                let h = this.size / ratio;
+                image(img, 0, 0, w, h);
+                pop();
+            }
+        }
+
+        // 文本句子类
+        class TextSentence {
+            constructor(_loc, _dir, _speed, _text, _size) {
+                this.loc = _loc;
+                this.dir = _dir;
+                this.speed = _speed;
+                this.text = _text;
+                this.size = _size;
+                this.color = color(random(150, 255), random(150, 255), random(150, 255));
+                this.rotation = random(TWO_PI);
+                this.rotationSpeed = random(-0.008, 0.008);
+                this.twinkle = random(0.5, 1.5);
+                this.font = 'Dancing Script'; // 新增：设置花体字属
+            }
+            
+            run() {
+                this.move();
+                this.checkEdges();
+                this.update();
+            }
+            
+            move() {
+                let angle = noise(this.loc.x/noiseScale, this.loc.y/noiseScale, frameCount/100)*TWO_PI*noiseStrength;
+                this.dir.x = sin(angle);
+                this.dir.y = cos(angle);
+                let vel = this.dir.copy();
+                vel.mult(this.speed);
+                this.loc.add(vel);
+                this.rotation += this.rotationSpeed;
+            }
+            
+            checkEdges() {
+                let margin = 200;
+                if (this.loc.x < -margin || this.loc.x > width + margin || 
+                    this.loc.y < -margin || this.loc.y > height + margin) {
+                    this.loc.x = random(width);
+                    this.loc.y = random(height);
+                }
+            }
+            
+            update() {
+                let alpha = 200 + sin(frameCount * this.twinkle) * 55;
+                
+                push();
+                translate(this.loc.x, this.loc.y);
+                rotate(this.rotation);
+                fill(red(this.color), green(this.color), blue(this.color), alpha);
+                textFont(this.font); // 新增：应用花体字
+                textSize(this.size);
+                text(this.text, 0, 0);
+                pop();
+            }
+        }
+    </script>
+</body>
+</html>
